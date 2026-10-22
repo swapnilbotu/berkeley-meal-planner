@@ -114,9 +114,10 @@ def test_payload_reconciles_and_date_only(meals):
     payload = m.task_payloads(DAY, meals)
     assert len(payload)==2
     assert all(t['due']=='2026-10-22T00:00:00Z' for t in payload)
-    assert all('Swipe cost: 1' in t['notes'] for t in payload)
+    assert all(t['notes'].startswith('Where: ') for t in payload)
+    assert all('[berkeley-meal-planner:' not in t['notes'] for t in payload)
     assert 'Daily snack plan' not in payload[0]['notes']
-    assert 'ESTIMATED' in payload[1]['notes']
+    assert 'Daily snack plan (estimates):' in payload[1]['notes']
     assert all(len(t['notes']) < 8192 for t in payload)
 
 
@@ -165,7 +166,8 @@ def test_lost_insert_response_does_not_duplicate_on_rerun(meals):
 
 def test_duplicate_managed_tasks_reconciled(meals):
     payload=m.task_payloads(DAY,meals)
-    client=FakeTasks([payload[0]|{'id':'1'},payload[0]|{'id':'2'}])
+    marked=payload[0]|{'notes':payload[0]['notes']+f'\n[berkeley-meal-planner:{DAY}:lunch]'}
+    client=FakeTasks([marked|{'id':'1'},marked|{'id':'2'}])
     m.reconcile(client,DAY,payload)
     assert len(client.items)==2 and 'DELETE' in client.calls
 
@@ -260,3 +262,27 @@ def test_optional_retail_policy_outage(monkeypatch):
         return '<p>Meal swipes at dining commons</p>'
     monkeypatch.setattr(m,'fetch',fetch)
     assert m.policies()=={'hall':m.PLAN_POLICY,'monsoon':None,'ladle':None}
+
+
+def test_compact_stations_and_snack_range(foods):
+    def food(name, period):
+        return next(f for f in foods if f.name == name and period in f.period and f.location == 'Crossroads')
+    lunch=m.Meal('Crossroads',((food('Paprika Rosemary Tofu','Lunch'),m.D(2)),(food('Bean Chili','Lunch'),m.D(1)),(food('Hummus','Lunch'),m.D(1))),'','')
+    dinner=m.Meal('Crossroads',((food('Baked Tofu Piccata','Dinner'),m.D('1.5')),(food('Sweet & Sour Tofu','Dinner'),m.D(1)),(food('Green Beans Garlic Stir Fry','Dinner'),m.D(1))),'','')
+    notes=m.task_payloads(DAY,(lunch,dinner))[1]['notes']
+    assert 'Baked Tofu Piccata [Centerplate] — 1.5 published serving(s); (312.89 C, 27.18 P)' in notes
+    assert 'Sweet & Sour Tofu [Lemongrass]' in notes
+    assert 'Total: 598.77 C, 46.07 P' in notes
+    assert '1 bar(s) (170 C, 21–22 P)' in notes
+    assert '1 × your usual portion (320.00 C, 10.00 P)' in notes
+    assert 'snack estimates: 490.00 C, 31.00–32.00 P' in notes
+    assert 'Estimated day total: 1691.43 C, 110.01–111.01 P' in notes
+    assert 'XML source' not in notes and 'Service hours' not in notes
+
+
+def test_history_handles_compact_notes_without_marker(meals):
+    tasks=m.task_payloads(DAY,meals)
+    names=m.recent_food_names(tasks, DAY+timedelta(days=1))
+    assert set(names)==set.union(*(meal.names for meal in meals))
+    assert m.recent_food_names(tasks,DAY)==[]
+    assert m.recent_food_names([tasks[0]|{'title':'Study'}],DAY+timedelta(days=1))==[]

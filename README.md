@@ -31,12 +31,14 @@ Write mode reads `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH
 5. Build 500–625 kcal dining-hall meals from one main protein/entrée and 1–2 sides. The main can be 1, 1.5, or 2 published servings. At least one side must be a vegetable/legume/fruit-type food. Condiment-only and dessert-only meals are excluded.
 6. Use the exact requested six-component Monsoon bowl on Tuesday, Wednesday, and Friday lunch when its complete menu and one-swipe policy are verified. The fixed bowl takes precedence over the usual soft calorie band. Weekends use only Café 3 and Crossroads.
 7. Ladle & Leaf full salads and grain bowls can be used when their published nutrition fits the band and the official one-swipe policy is still present. The included beverage is declined, so no unverified beverage nutrition is added.
-8. Optimize daily calorie/protein fit, discourage repeating food names within the day or from the previous three days' managed tasks, and use a deterministic date-based tie breaker.
+8. Optimize daily calorie/protein fit, discourage repeating food names within the day or from the previous three days' meal tasks, and use a deterministic date-based tie breaker.
 9. Re-fetch the selected items' official nutrition popups and match item name, serving size, calories, and protein to the XML. Any disagreement prevents task writes.
 
 Golden Bear Café is fetched but currently excluded from selection: its official page confirms swipe acceptance, but no current official rule for specific eligible combinations was verified. Its foods must not be treated as freely combinable dining-hall items. Add it only after verifying exact combination rules against an official source and implementing tests for those rules.
 
-Snacks are explicitly estimated: 170 kcal / 21 g protein per Kirkland bar, and 300 kcal / 8 g protein per usual trail-mix portion. The optimizer selects 1–2 bars and 0–1.25 usual portions of trail mix in quarter-portion increments. Those are planning assumptions, not verified package labels. Actual package macros and egg-free ingredients must replace those assumptions when available. Daily snack totals appear only in dinner notes, avoiding double counting.
+Task notes use the requested compact layout: restaurant, meal, each component with the official dining-hall station/category and serving count, and reconciled calorie/protein totals. Technical source URLs, hours, ounce sizes, policy text, and internal markers are omitted from task notes; retrieval, dietary, hours, swipe and nutrition-panel checks still run. Retail notes retain the instruction to decline the included beverage.
+
+Snacks use the user's estimates: 170 kcal / 21–22 g protein per Kirkland bar and 320 kcal / 10 g protein per usual trail-mix portion. The optimizer uses the lower bar-protein value and selects 1–2 bars and 0–1.25 usual portions in quarter-portion increments. Task notes show quantities and the resulting protein range, with snack estimates and combined totals only in dinner. These are user-supplied estimates, not verified package labels.
 
 ## Duplicate prevention and recovery
 
@@ -44,7 +46,7 @@ Snacks are explicitly estimated: 170 kcal / 21 g protein per Kirkland bar, and 3
 - List all pages, including hidden and completed tasks.
 - Match the target date and an anchored `Lunch —`/`Dinner —` prefix (hyphen/en dash also accepted).
 - Update existing tasks without resetting their completion status; create only missing tasks.
-- Remove only duplicate tasks bearing this application's explicit management marker. Multiple ambiguous legacy tasks stop the run for review rather than deleting unrelated user data.
+- Remove only old duplicate tasks bearing this application's explicit management marker. New compact notes omit that marker: multiple unmarked tasks for one meal/date stop for review. Normal reruns still update the single existing task by date and meal title, including hidden/completed tasks.
 - Never blindly retry an insertion after a network error. A subsequent run lists tasks again and recovers an insertion that committed before its response was lost.
 - Read back both titles, complete notes, due dates, and count after writes.
 - Preflight both meal slots before modifying either one.

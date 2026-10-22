@@ -283,7 +283,7 @@ def snack_plan(calories, protein):
     for bars in (1, 2):
         for quarters in range(0, 6):
             mix = D(quarters) / 4
-            c, p = D(170)*bars + D(300)*mix, D(21)*bars + D(8)*mix
+            c, p = D(170)*bars + D(320)*mix, D(21)*bars + D(10)*mix
             score = abs(calories+c-D(1750))/5 + abs(protein+p-D(110))*3
             options.append((score, bars, mix, c, p))
     return min(options)
@@ -335,33 +335,23 @@ def task_payloads(day, meals):
     _, bars, mix, sc, sp = snack_plan(c, p)
     result = []
     for slot, meal in zip(("Lunch", "Dinner"), meals):
-        lines = [f"Date: {day.isoformat()} (date-only)", f"Where: {meal.location}",
-                 f"Service hours: {meal.hours} America/Los_Angeles", f"Meal: {meal.label or ' + '.join(f.name for f, _ in meal.parts)}"]
+        lines = [f"Where: {meal.location}",
+                 f"Meal: {meal.label or ' + '.join(f.name for f, _ in meal.parts)}"]
         for f, n in meal.parts:
-            lines.append(f"- {f.name} — {n} published serving(s); each {f.serving} ({fmt(f.calories*n)} C, {fmt(f.protein*n)} P)")
-        lines += [f"Total: {fmt(meal.calories)} C, {fmt(meal.protein)} P", "Swipe cost: 1",
-                  "C = kcal; P = grams of protein. Totals sum the displayed item values.",
-                  "Official Berkeley nutrition at published portions; proportional arithmetic for multiple/fractional servings. Prepared recipes include their listed sauces/oils; no extra toppings.",
-                  "Availability and service hours verified for this date and meal period. Menu may change or sell out.",
-                  "Nutrition source: " + MENU,
-                  "XML source(s): " + ", ".join(sorted({f.source for f, _ in meal.parts})),
-                  "Selected nutrition verified against the website popup endpoint.", "Swipe policy: " + meal.policy]
+            station = f" [{f.category.strip()}]" if meal.location in {"Café 3", "Crossroads"} and f.category.strip() else ""
+            lines.append(f"- {f.name}{station} — {n} published serving(s); ({fmt(f.calories*n)} C, {fmt(f.protein*n)} P)")
+        lines.append(f"Total: {fmt(meal.calories)} C, {fmt(meal.protein)} P")
         if meal.location in {"Monsoon Kitchens", "Ladle & Leaf"}:
-            lines.append("Decline the included beverage; no beverage calories are assumed.")
-        if not 500 <= meal.calories <= 625:
-            lines.append("The requested fixed Monsoon bowl exceeds the usual meal calorie band; no components silently removed.")
-        if day.weekday() in {0, 3, 5}:
-            lines.append("Vegetarian day: dairy allowed, no eggs; official dietary and ingredient checks applied.")
+            lines.append("Decline the included beverage.")
         if slot == "Dinner":
-            lines += ["", "Daily snack plan — counted ONCE, here only:",
-                      f"- Kirkland protein bar, Chocolate Peanut Butter Chip or Cookies & Cream: {bars} bar(s) (ESTIMATED {170*bars} C, {21*bars} P).",
-                      f"- Kirkland trail mix with M&Ms: {mix} × your usual portion (ESTIMATED {fmt(300*mix)} C, {fmt(8*mix)} P).",
-                      "Estimates assume 170 C / 21 P per bar and 300 C / 8 P per usual trail-mix portion. Package-specific figures and egg-free ingredients are unverified; use your wrapper values. No Berkeley source is claimed for snacks.",
-                      f"Meals: {fmt(c)} C, {fmt(p)} P; snack estimates: {fmt(sc)} C, {fmt(sp)} P.",
-                      f"Estimated day total: {fmt(c+sc)} C, {fmt(p+sp)} P. Daily swipe total: 2; seven days: 14."]
-            if abs(c+sc-D(1750)) > 100 or p+sp < 100:
-                lines.append("Target not closely attainable with today's verified meals and these snack assumptions; totals above are the actual plan, not a claim of target attainment.")
-        lines.append(f"[berkeley-meal-planner:{day.isoformat()}:{slot.lower()}]")
+            # The flavor is not fixed: show the user-supplied protein range.
+            protein_range = f"{fmt(sp)}–{fmt(sp+bars)}"
+            lines += ["", "Daily snack plan (estimates):",
+                      f"- Kirkland protein bar, Chocolate Peanut Butter Chip or Cookies & Cream: {bars} bar(s) ({170*bars} C, {21*bars}–{22*bars} P).",
+                      f"- Kirkland trail mix with M&Ms: {mix} × your usual portion ({fmt(320*mix)} C, {fmt(10*mix)} P).",
+                      "",
+                      f"Meals: {fmt(c)} C, {fmt(p)} P; snack estimates: {fmt(sc)} C, {protein_range} P.",
+                      f"Estimated day total: {fmt(c+sc)} C, {fmt(p+sp)}–{fmt(p+sp+bars)} P."]
         result.append({"title":f"{slot} — {meal.location} / {meal.label or meal.parts[0][0].name}",
                        "notes":"\n".join(lines), "due":day.isoformat()+"T00:00:00Z"})
     return result
@@ -466,6 +456,22 @@ def reconcile(client, day, payloads):
     LOG.info("Read-back verified exactly two meal tasks due %s", day)
 
 
+def recent_food_names(tasks, day):
+    names = []
+    for task in tasks:
+        if task.get("deleted") or task.get("due", "")[:10] >= day.isoformat():
+            continue
+        if not re.match(r"^(Lunch|Dinner)\s*(?:—|–|-)\s*", task.get("title", ""), re.I):
+            continue
+        notes = task.get("notes", "")
+        if "Where: " not in notes or "Meal: " not in notes:
+            continue
+        # Supports old verbose notes and compact station labels without a visible ID marker.
+        for name in re.findall(r"^- (.+?) — ", notes, re.M):
+            names.append(re.sub(r" \[[^\]\n]*\]$", "", name))
+    return names
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", type=date.fromisoformat)
@@ -476,11 +482,7 @@ def main():
     if args.write and day != datetime.now(TZ).date():
         raise VerificationError("Writes are limited to today's Los Angeles date")
     client = Tasks() if args.write else None
-    recent = []
-    if client:
-        for task in client.tasks(day-timedelta(days=3), day):
-            if task.get("due", "")[:10] < day.isoformat() and "[berkeley-meal-planner:" in task.get("notes", ""):
-                recent += re.findall(r"^- (.+?) — ", task["notes"], re.M)
+    recent = recent_food_names(client.tasks(day-timedelta(days=3), day), day) if client else []
     meals = choose(load_today(day), day, policies(), recent)
     LOG.info("Golden Bear Café excluded: exact eligible swipe combinations not independently verified")
     verify_panels(meals)
