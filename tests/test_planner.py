@@ -286,3 +286,23 @@ def test_history_handles_compact_notes_without_marker(meals):
     assert set(names)==set.union(*(meal.names for meal in meals))
     assert m.recent_food_names(tasks,DAY)==[]
     assert m.recent_food_names([tasks[0]|{'title':'Study'}],DAY+timedelta(days=1))==[]
+
+
+@pytest.mark.parametrize('cross_protein,expected', [('39','Crossroads'),('10','Café 3')])
+def test_crossroads_preferred_unless_macros_materially_worse(monkeypatch,foods,cross_protein,expected):
+    def meal(location,name,protein):
+        f=replace(foods[0],name=name,calories=m.D(600),protein=m.D(protein))
+        return m.Meal(location,((f,m.D(1)),),'','')
+    lunch_cross=meal('Crossroads','Crossroads lunch',cross_protein)
+    lunch_cafe=meal('Café 3','Cafe lunch','39')
+    dinner=meal('Crossroads','Dinner','40')
+    monkeypatch.setattr(m,'meal_candidates',lambda foods,day,slot,policy: [lunch_cross,lunch_cafe] if slot=='Lunch' else [dinner])
+    # Recent repetition cannot override the hall preference when macros match.
+    selected=m.choose([],DAY,POLICY,recent_names=['Crossroads lunch'])
+    assert selected[0].location==expected
+
+
+def test_crossroads_preference_does_not_override_monsoon(foods):
+    day=date(2026,10,23)
+    selected=m.choose([replace(f,day=day) for f in foods],day,POLICY)
+    assert selected[0].location=='Monsoon Kitchens'

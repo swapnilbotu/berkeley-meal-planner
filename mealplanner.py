@@ -273,7 +273,14 @@ def meal_candidates(foods, day, slot, policy):
         raise VerificationError("No verified compliant " + slot.lower() + " meal within the calorie band")
     # Preserve options across locations; daily selection considers protein and repeated foods.
     result.sort(key=lambda m: (abs(m.calories-D(585)) + max(D(0),D(32)-m.protein)*8, sorted(m.names)))
-    return result[:160]
+    # Keep options from each location so a global cap cannot remove Crossroads.
+    counts = {}
+    kept = []
+    for meal in result:
+        if counts.get(meal.location, 0) < 160:
+            kept.append(meal)
+            counts[meal.location] = counts.get(meal.location, 0) + 1
+    return kept
 
 
 @lru_cache(maxsize=32768)
@@ -293,15 +300,24 @@ def choose(foods, day, policy, recent_names=()):
     lunches = meal_candidates(foods, day, "Lunch", policy)
     dinners = meal_candidates(foods, day, "Dinner", policy)
     recent = set(recent_names)
+    def macro_score(pair):
+        c = sum(meal.calories for meal in pair)
+        p = sum(meal.protein for meal in pair)
+        return snack_plan(c, p)[0] + max(D(0), D(60)-p)*2
+
+    # Prefer fewer Café 3 visits among plans with a similar daily macro fit.
+    # A 20-point tolerance is 100 kcal OR about 6.7 g protein of target error
+    # under the existing scoring weights; combined errors also count.
+    # Retail eligibility and the fixed Monsoon lunch are already enforced above.
+    best_macro = min(macro_score(pair) for pair in itertools.product(lunches, dinners))
     def score(pair):
         lunch, dinner = pair
-        c, p = lunch.calories+dinner.calories, lunch.protein+dinner.protein
-        snack_score = snack_plan(c, p)[0]
         repeated = len(lunch.names & dinner.names)*15 + len((lunch.names | dinner.names) & recent)*5
-        # Stable daily tie-breaker provides variety without random rerun changes.
         tie = hashlib.sha256((day.isoformat()+"|"+"|".join(sorted(lunch.names))+"/"+"|".join(sorted(dinner.names))).encode()).hexdigest()
-        return (snack_score + repeated + max(D(0),D(60)-p)*2, tie)
-    return min(itertools.product(lunches, dinners), key=score)
+        return (sum(meal.location == "Café 3" for meal in pair), macro_score(pair)+repeated, tie)
+    close_plans = (pair for pair in itertools.product(lunches, dinners)
+                   if macro_score(pair) <= best_macro+D(20))
+    return min(close_plans, key=score)
 
 
 def verify_panels(meals):
