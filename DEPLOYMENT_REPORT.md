@@ -1,24 +1,24 @@
 # Deployment report — October 22, 2026
 
-**Status: private repository deployed and hosted live dry test passed; unattended Google Tasks writes await OAuth authorization.**
+**Status: deployed, enabled, and end-to-end tested with two successful GitHub-hosted Google Tasks write runs.**
 
-Private repository created: https://github.com/swapnilbotu/berkeley-meal-planner (default branch `main`, verified private). GitHub authorization is complete. No standalone Google OAuth refresh token was configured. A GitHub-hosted live dry test passed; scheduled task writes remain gated. No paid billing or paid usage was enabled. A hosted Google Tasks write test has not yet run.
+Private repository: https://github.com/swapnilbotu/berkeley-meal-planner (default branch `main`, verified private). Standalone Google OAuth authorization is complete, with three encrypted Actions secrets configured. Both hosted write runs refreshed Google access, retrieved the current official menu, updated the existing two meal tasks, and verified their contents. The second run retained both task IDs and created no duplicates. Daily scheduling is enabled. No paid billing or paid usage was enabled.
 
 | Requested step | Verified result |
 |---|---|
 | Investigate Berkeley menu and clickable nutrition | Complete: traced `cald_filter_xml` and `get_recipe_details` from official UI JavaScript, discovered public XML exports, and matched selected foods to popup responses. |
 | Python implementation | Written, with direct official-source retrieval, constrained meal selection, policy checks, Google OAuth/Tasks client, and secure setup script. |
-| Automated tests | 36 tests passed locally and on GitHub Actions (4.60 seconds on the hosted runner). |
+| Automated tests | 36 tests passed locally and in all three hosted runs; 3.79 seconds and 1.93 seconds in the two write runs. |
 | Current live menu retrieval | Passed: October 22, 330 recipes across four source files; all six selected food panels verified. |
 | Monsoon rule live test | Passed against October 23's published menu: all six specified bowl components, 581.35 kcal and 30.80 g protein; nine selected food panels checked across lunch and dinner. No future tasks written. |
 | Weekend live test | Passed against October 24's published menu: 281 recipes from two dining-hall exports; Café 3 lunch and Crossroads dinner; six selected panels verified. No future tasks written. |
-| Today's Google Tasks | Updated the existing lunch and dinner through the connected Google Tasks account. Read-back confirmed exactly two meal tasks, matching complete generated notes and October 22 date-only deadlines. |
+| Today's Google Tasks | Both GitHub-hosted write runs updated the existing lunch and dinner using standalone OAuth. Independent connector read-back confirmed exactly two meal tasks, stable IDs and notes, reconciled item totals, October 22 date-only deadlines, and unchanged unrelated tasks. |
 | Private repository | Created and verified private under `swapnilbotu/berkeley-meal-planner`. |
-| Secure production OAuth | Blocked: a new standalone grant is required; the available Cloud Browser could not open Google Cloud Console. No credentials exported or committed. |
-| Daily 7 AM schedule | Registered workflow ID `393303938`, verified `active`; YAML uses `timezone: America/Los_Angeles`. Scheduled writes require `GOOGLE_OAUTH_READY=true`, which is deliberately unset until authorization. |
+| Secure production OAuth | User screenshot confirmed External / In production. Local authorization script configured GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN in encrypted Actions secrets at 20:53 UTC. Both hosted refresh-token exchanges and Google Tasks operations succeeded. No credentials committed or printed. |
+| Daily 7 AM schedule | Registered workflow ID `393303938`, verified `active`; YAML uses `timezone: America/Los_Angeles`. Both `GOOGLE_OAUTH_READY=true` and `ZERO_COST_VERIFIED=true` are configured and read back. Next scheduled trigger: October 23, 2026 at 7 AM Pacific; daylight saving changes handled by the timezone field. |
 | Zero-cost enforcement | Verified GitHub Free, October Actions usage query initially empty, and signed-in Budgets page showing account-wide Actions $0/$0 with `Usage blocked`. `ZERO_COST_VERIFIED=true` is configured. No budget or billing settings were changed. Standard Ubuntu runner only; no cache/artifact uploads. |
-| Hosted execution | Live dry run [39845012641](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39845012641) passed on commit `8e8b569757f82c4245e2bee955e6b90a0497bad4`: 330 recipes, four XML sources, six selected panels verified, correct two-meal totals. Hosted OAuth-to-Tasks writing remains untested. |
-| Older ChatGPT automation | `Daily Berkeley Meal Tasks` was confirmed disabled; no replacement ChatGPT prompt/reminder was created. |
+| Hosted execution | Live dry run [39845012641](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39845012641) passed on commit `8e8b569757f82c4245e2bee955e6b90a0497bad4`: 330 recipes, four XML sources, six selected panels verified, correct two-meal totals. Hosted write runs [39852855303](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39852855303) and [39852984641](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39852984641) both passed on commit `a35fff6369124774237e39396ec7c5772dedbd7c`. Each verified exactly two meal tasks after updating them. |
+| Older ChatGPT automation | `Daily Berkeley Meal Tasks` was rechecked after authorization and confirmed disabled; no replacement ChatGPT prompt/reminder was created. |
 
 ## Today's verified task results
 
@@ -46,7 +46,7 @@ Verified list: existing `My Tasks`, ID `MDM4Mzk1Mjg4NzQxODE3ODY0NzU6MDow`, conne
 
 Tests cover known official nutrition values; stale menu/food dates; invalid or missing nutrition; explicit closures; XML declaration rejection; vegetarian/no-egg rules; meat/broth exclusions; weekend dining-hall restrictions; exact Monsoon composition; missing-component and missing-policy fallbacks; daily totals; completed/hidden-task updates; pagination; other-date protection; managed duplicate cleanup; ambiguous legacy duplicate preflight; lost insertion response recovery; read-back mismatch; missing OAuth secrets; popup disagreement; and Los Angeles summer/winter dates.
 
-The actual GitHub runner, dependency installation, all 36 automated tests, current Berkeley retrieval, selected-panel validation, and execution summary passed in run 39845012641 (20:00:13–20:00:54 UTC on October 22). The production OAuth refresh, actual Google Tasks HTTP client, and GitHub secret configuration still need live testing. The workflow is registered and active, but scheduled writes remain gated; this is not a completed unattended deployment.
+The actual GitHub runner, dependency installation, all 36 automated tests, current Berkeley retrieval, selected-panel validation, and execution summary passed in run 39845012641 (20:00:13–20:00:54 UTC on October 22). The production OAuth refresh, actual Google Tasks HTTP client, and GitHub secret configuration then passed in write runs 39852855303 (20:54:34–20:54:54 UTC) and 39852984641 (20:55:28–20:55:44 UTC). Each retrieved 330 recipes, verified six nutrition panels, and logged exactly two meal tasks after writes. Independent read-back showed identical notes and IDs across reruns, and unchanged unrelated tasks. The workflow is active and both configuration gates are enabled. These were manual dispatches of the production workflow; the first scheduled 7 AM invocation has not occurred yet.
 
 ## Remaining constraints
 
@@ -56,10 +56,13 @@ The actual GitHub runner, dependency installation, all 36 automated tests, curre
 - A 7 AM GitHub schedule accounts for daylight saving time, but GitHub may delay or drop scheduled jobs under load.
 - Snack macros and dietary details remain explicitly labeled assumptions until the specific wrappers are verified.
 
-## Unavoidable next authorization steps
+## Final configuration and maintenance
 
-1. GitHub connection and private repository creation are complete; no additional GitHub connection is needed.
-2. Create/approve a no-billing Google OAuth client and authorize the Tasks scope for `swapnilbotu@gmail.com`; the included script writes its credentials directly to GitHub encrypted secrets.
-3. GitHub free allowance and effective $0 stop-spending protection are verified. After the three secrets exist, set `GOOGLE_OAUTH_READY=true`; leave the $0 budget unchanged.
-
-The hosted dry test is complete. After authorization, run the hosted write test, repeat it to prove stable task IDs, confirm scheduled writes are enabled, and replace this report's incomplete status with actual write-run evidence.
+- Private application repository: https://github.com/swapnilbotu/berkeley-meal-planner
+- Workflow: https://github.com/swapnilbotu/berkeley-meal-planner/actions/workflows/daily-meals.yml
+- Schedule: `0 7 * * *` with `timezone: America/Los_Angeles`.
+- Both Actions variables are `true`; all three required encrypted secrets exist.
+- A separate public, documentation-only site supplies Google consent homepage and privacy URLs: https://swapnilbotu.github.io/berkeley-meal-planner-info/. It contains no credentials or private application code and uses free public GitHub Pages.
+- No further user setup is required for ordinary daily operation. The laptop can be off.
+- Keep the account-wide $0 Actions spending block in place. If free minutes run out, runs must stop rather than incur charges.
+- If Google revokes authorization, rerun the local authorization script. If a menu or service changes, inspect the failed workflow log; do not replace missing official values with invented numbers.

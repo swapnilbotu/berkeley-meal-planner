@@ -2,7 +2,7 @@
 
 Deterministic Python planner using official Berkeley menu XML and nutrition-popup requests. No AI inference, paid API, paid hosting, database, or commercial scheduler is used.
 
-**Deployment status: private repository created; unattended Google Tasks writes not activated.** Repository: https://github.com/swapnilbotu/berkeley-meal-planner. Local tests and live menu-to-task integration succeeded on October 22, 2026. GitHub-hosted live dry run [39845012641](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39845012641) also passed (36 tests; 330 recipes; six selected nutrition panels). GitHub authorization is complete. GitHub's account-wide $0 Actions budget was verified with usage blocked; standalone Google OAuth authorization is still required. See `DEPLOYMENT_REPORT.md` for tested results and precise limitations.
+**Deployment status: enabled and end-to-end tested on October 22, 2026.** Private repository: https://github.com/swapnilbotu/berkeley-meal-planner. Both GitHub-hosted write runs [39852855303](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39852855303) and [39852984641](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/39852984641) passed all 36 tests, retrieved 330 official recipes, cross-checked six selected nutrition panels, and updated exactly two Google Tasks. Independent read-back confirmed stable task IDs, identical notes, no duplicates, and unchanged unrelated tasks. Google OAuth secrets are configured; the daily 7 AM America/Los_Angeles workflow is active with both readiness variables enabled. GitHub's account-wide $0 Actions budget was verified with usage blocked. See `DEPLOYMENT_REPORT.md` for evidence and limitations.
 
 ## Run locally
 
@@ -57,7 +57,7 @@ The prepared workflow runs once daily at `07:00 America/Los_Angeles`, using GitH
 
 **Before allocating any hosted runner:** verify remaining included minutes and either that the account has no payment method (usage stops when its free quota is exhausted) or that an effective zero-dollar Actions budget with stop-usage protection prevents paid usage. Never enable a paid allowance. Do not use larger runners. The workflow job is gated by repository variable `ZERO_COST_VERIFIED=true`; leave it unset until this check is completed. The variable is an administrative gate, not an API billing monitor.
 
-The private repository is https://github.com/swapnilbotu/berkeley-meal-planner, with default branch `main`. The October 2026 billing query returned no Actions usage entries. On October 22 the signed-in Budgets page showed an account-wide Actions budget of $0 with Usage blocked. `ZERO_COST_VERIFIED=true` is configured. Scheduled runs and manual writes remain gated by `GOOGLE_OAUTH_READY=true`; manual dry tests may run before OAuth setup.
+The private repository is https://github.com/swapnilbotu/berkeley-meal-planner, with default branch `main`. The October 2026 billing query returned no Actions usage entries. On October 22 the signed-in Budgets page showed an account-wide Actions budget of $0 with Usage blocked. `ZERO_COST_VERIFIED=true` is configured. `GOOGLE_OAUTH_READY=true` is also configured, enabling scheduled runs and manual writes. The setup instructions below are retained for recovery or redeployment; ordinary operation needs no further setup.
 
 ## One-time Google authorization
 
