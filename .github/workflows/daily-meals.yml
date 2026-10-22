@@ -22,7 +22,7 @@ jobs:
   plan:
     # Must be set only after checking free allowance and a $0 stop-spending policy
     # (or no payment method). Gating before runner allocation avoids accidental costs.
-    if: vars.ZERO_COST_VERIFIED == 'true'
+    if: vars.ZERO_COST_VERIFIED == 'true' && (vars.GOOGLE_OAUTH_READY == 'true' || (github.event_name == 'workflow_dispatch' && !inputs.write_tasks))
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
