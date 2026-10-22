@@ -1,4 +1,4 @@
-# Berkeley meal planner
+# Berkeley Meal Planner
 
 Deterministic Python planner using official Berkeley menu XML and nutrition-popup requests. No AI inference, paid API, paid hosting, database, or commercial scheduler is used.
 
