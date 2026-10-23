@@ -55,7 +55,7 @@ Google Tasks has no two-task transaction and does not accept an idempotency key 
 
 ## Free deployment setup
 
-The prepared workflow runs once daily at `07:00 America/Los_Angeles`, using GitHub's native timezone field, with an eight-minute job cap, standard Ubuntu runner, no artifact uploads, and no caches. At the cap, 31 daily runs would consume at most 248 runner minutes, before manual/test runs and GitHub's billing rounding. Other repositories share the account allowance.
+The workflow targets `07:00 America/Los_Angeles`, with recovery checks at `07:23` and `08:17`, using GitHub's native timezone field for DST. Scheduled runs use `--write --if-missing`: an existing complete lunch/dinner plan is read back and preserved, including completed tasks. Missing or incomplete plans go through the same current-menu validation and duplicate-safe reconciliation. Manual writes can still refresh the plan; select `recovery_only` to exercise recovery instead. Each run has an eight-minute job cap, standard Ubuntu runner, no artifact uploads, and no caches. At the cap, 93 scheduled runs over 31 days consume at most 744 runner minutes, before manual/test runs, runner setup, and billing rounding. Other repositories share the account allowance.
 
 **Before allocating any hosted runner:** verify remaining included minutes and either that the account has no payment method (usage stops when its free quota is exhausted) or that an effective zero-dollar Actions budget with stop-usage protection prevents paid usage. Never enable a paid allowance. Do not use larger runners. The workflow job is gated by repository variable `ZERO_COST_VERIFIED=true`; leave it unset until this check is completed. The variable is an administrative gate, not an API billing monitor.
 
@@ -93,7 +93,7 @@ After zero-cost protection and OAuth secrets are verified:
 6. Confirm the old ChatGPT meal-planning automation is still disabled and no other deployment writes the same tasks.
 7. Record the repository URL, commit SHA, workflow URL, run IDs, task IDs, schedule, and cost-control evidence in the deployment report. Only then report production deployment successful.
 
-GitHub can delay or drop scheduled runs under load. A 7:00 AM schedule is not a guarantee of delivery at exactly 7:00:00. Failed workflows expose a red run status and useful logs; notification delivery depends on your GitHub notification settings. No additional reminder/ChatGPT automation is created.
+GitHub can delay or drop scheduled runs under load. A 7:00 AM schedule is not a guarantee of delivery at exactly 7:00:00. The two off-hour recovery checks reduce single-trigger failures but cannot guarantee delivery if GitHub drops all three triggers. Failed workflows expose a red run status and useful logs; notification delivery depends on your GitHub notification settings. No additional reminder/ChatGPT automation is created.
 
 ## Official references
 

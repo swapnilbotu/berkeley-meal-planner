@@ -4,10 +4,19 @@ on:
   schedule:
     - cron: '0 7 * * *'
       timezone: America/Los_Angeles
+    # Off-hour retries recover a delayed/dropped trigger or transient source failure.
+    - cron: '23 7 * * *'
+      timezone: America/Los_Angeles
+    - cron: '17 8 * * *'
+      timezone: America/Los_Angeles
   workflow_dispatch:
     inputs:
       write_tasks:
         description: 'Create/update today’s two Google Tasks (false runs a live dry test)'
+        type: boolean
+        default: false
+      recovery_only:
+        description: 'Preserve an existing complete daily plan (requires write_tasks)'
         type: boolean
         default: false
 
@@ -43,9 +52,14 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           WRITE_TASKS: ${{ github.event_name == 'schedule' || inputs.write_tasks }}
+          RECOVERY_ONLY: ${{ github.event_name == 'schedule' || inputs.recovery_only }}
         run: |
           if [ "$WRITE_TASKS" = 'true' ]; then
-            python mealplanner.py --write
+            if [ "$RECOVERY_ONLY" = 'true' ]; then
+              python mealplanner.py --write --if-missing
+            else
+              python mealplanner.py --write
+            fi
           else
             python mealplanner.py
           fi

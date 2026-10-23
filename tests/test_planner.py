@@ -156,6 +156,41 @@ def test_idempotent_rerun_and_completed_hidden(meals):
     assert client.items[1]['title']=='Study'
 
 
+@pytest.mark.parametrize('present', [0, 1, 2])
+def test_recovery_creates_missing_plan_without_changing_complete_plan(monkeypatch, tmp_path, meals, present):
+    day = datetime.now(m.TZ).date()
+    payloads = m.task_payloads(day, meals)
+    existing = [p | {'id':str(i), 'status':'completed', 'hidden':True}
+                for i, p in enumerate(payloads[:present])]
+    client = FakeTasks(existing)
+    monkeypatch.setattr(m, 'Tasks', lambda:client)
+    source_calls = []
+    monkeypatch.setattr(m, 'load_today', lambda day:source_calls.append(day))
+    monkeypatch.setattr(m, 'policies', lambda:POLICY)
+    monkeypatch.setattr(m, 'choose', lambda *args:meals)
+    monkeypatch.setattr(m, 'verify_panels', lambda meals:None)
+    output = tmp_path/'plan.json'
+    m.main(['--write', '--if-missing', '--output', str(output)])
+    assert len(client.items) == 2
+    assert client.calls.count('POST') == 2-present
+    assert bool(source_calls) == (present < 2)
+    if present == 2:
+        assert client.calls == [] and client.items == existing
+    assert json.loads(output.read_text()) == payloads
+    before = copy.deepcopy(client.items)
+    client.calls.clear()
+    m.main(['--write', '--if-missing', '--output', str(output)])
+    assert client.calls == [] and client.items == before
+
+
+def test_recovery_rejects_duplicates_and_does_not_accept_other_dates(meals):
+    payloads = m.task_payloads(DAY, meals)
+    assert m.existing_plan(FakeTasks(payloads), DAY+timedelta(days=1)) is None
+    assert m.existing_plan(FakeTasks([payloads[0], payloads[1] | {'notes':''}]), DAY) is None
+    with pytest.raises(m.VerificationError):
+        m.existing_plan(FakeTasks(payloads+[payloads[0]]), DAY)
+
+
 def test_lost_insert_response_does_not_duplicate_on_rerun(meals):
     payload=m.task_payloads(DAY,meals)
     client=FakeTasks();client.lose_insert_response=True

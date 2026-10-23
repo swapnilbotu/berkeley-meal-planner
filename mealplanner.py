@@ -488,16 +488,45 @@ def recent_food_names(tasks, day):
     return names
 
 
-def main():
+def existing_plan(client, day):
+    """Read both slots before recovery; preserve a complete plan, even if completed."""
+    tasks = client.tasks(day, day+timedelta(days=1))
+    slots = [matching_tasks(tasks, day, slot) for slot in ("Lunch", "Dinner")]
+    if any(len(matches) > 1 for matches in slots):
+        raise VerificationError("Multiple meal tasks need review; recovery will not change them")
+    if any(not matches for matches in slots):
+        return None
+    payloads = []
+    for matches in slots:
+        task = matches[0]
+        notes = task.get("notes", "")
+        if not all(re.search(r"^"+field+r" .+", notes, re.M) for field in ("Where:", "Meal:", "Total:")):
+            return None
+        payloads.append({key:task[key] for key in ("title", "notes", "due")})
+    return payloads
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", type=date.fromisoformat)
     parser.add_argument("--write", action="store_true", help="Write and verify Google Tasks; default is read-only dry run")
+    parser.add_argument("--if-missing", action="store_true", help="Recovery: preserve an existing complete daily plan; requires --write")
     parser.add_argument("--output", default="out/plan.json")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.if_missing and not args.write:
+        parser.error("--if-missing requires --write")
     day = args.date or datetime.now(TZ).date()
     if args.write and day != datetime.now(TZ).date():
         raise VerificationError("Writes are limited to today's Los Angeles date")
     client = Tasks() if args.write else None
+    if args.if_missing:
+        saved = existing_plan(client, day)
+        if saved is not None:
+            dest = Path(args.output)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(json.dumps(saved, indent=2, ensure_ascii=False)+"\n")
+            LOG.info("Read-back verified exactly two existing meal tasks due %s; recovery made no changes", day)
+            return
     recent = recent_food_names(client.tasks(day-timedelta(days=3), day), day) if client else []
     meals = choose(load_today(day), day, policies(), recent)
     LOG.info("Golden Bear Café excluded: exact eligible swipe combinations not independently verified")
