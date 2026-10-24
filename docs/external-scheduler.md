@@ -21,8 +21,10 @@ which passed 50 tests and verified exactly two existing meal tasks without chang
 An actual scheduled request fired October 24 at **9:45:04 AM Pacific**, against a
 9:45:00 AM temporary test schedule (4.98 seconds reported jitter), and returned
 HTTP 200. It started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748).
-GitHub has assigned a runner but its completion is still pending. The job was then
-restored to the production schedule below, saved, reloaded, and verified enabled:
+That run succeeded: 50 tests passed, and at 9:45:34 AM its log verified exactly
+two existing meal tasks without changes. GitHub did not expose the completed
+status/logs until about 9:53 AM; this reporting delay did not delay the logged
+Google Tasks verification. The job was then restored to the production schedule below, saved, reloaded, and verified enabled:
 the next executions are October 25 at 7:00 AM and 7:15 AM Pacific.
 
 The saved token expires **November 23, 2026 at 17:34:05 UTC (9:34 AM Pacific)**,
@@ -69,9 +71,9 @@ dispatch acceptance, not successful menu retrieval or task writes.
 For a redeployment, run the service's test request. Check the new GitHub run, its test results and
 read-back log, then independently verify exactly one lunch and one dinner task
 for the current Pacific date. Observe a genuine scheduled request in the service
-history and its corresponding successful GitHub run. After that, reduce native
-GitHub cron to one later fallback (`17 16 * * *`) to limit runner consumption;
-retain manual dispatch. Do not disable the workflow itself.
+history and its corresponding successful GitHub run. Native GitHub cron now has
+one later fallback (`17 16 * * *`) to limit runner consumption. Retain manual
+dispatch; do not disable the workflow itself.
 
 The account-wide $0 Actions stop-spending protection remains required. An external
 scheduler avoids GitHub's cron dispatcher but cannot guarantee availability of

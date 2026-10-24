@@ -4,10 +4,13 @@ Private repository: https://github.com/swapnilbotu/berkeley-meal-planner
 
 ## Current status
 
-The external schedule is enabled and its actual timer has fired successfully.
-The authenticated test run passed all 50 tests and verified two tasks. The separate
-timer-triggered GitHub run is still awaiting completion, so final execution
-verification is pending. No paid billing or paid usage has been enabled.
+**Deployed, enabled, and verified.** Both the service's test request and an actual
+scheduled trigger produced successful GitHub runs. Each passed 50 tests and read
+back exactly two meal tasks without changes or duplicates. The final daily schedule
+is saved and enabled. No paid billing or paid usage has been enabled.
+
+The schedule change is deployed on `main` in commit
+[`13bd585`](https://github.com/swapnilbotu/berkeley-meal-planner/commit/13bd58563485c5a46de3c8863dab44f081424159).
 
 GitHub's native cron did not deliver the morning target on October 23 or 24.
 October 23's first recorded scheduled event was at 11 AM Pacific. No scheduled
@@ -43,13 +46,14 @@ scheduled prompt. Google OAuth credentials remain in encrypted Actions secrets.
 | Current official menu and actual Tasks writes | [Run 40108915300](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40108915300): 45 tests, 285 official recipes from two dining-hall XML files, six selected nutrition popups verified, two October 24 meal tasks created and read back. |
 | Recovery behavior | [Run 40109403696](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40109403696): 50 tests passed; exactly two existing tasks verified, no changes. |
 | Authenticated external test request | cron-job.org HTTP 200, [run 40112697565](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40112697565), October 24 at 9:41 AM Pacific: 50 tests passed; exactly two existing tasks verified, no changes. |
-| Genuine timed service execution | Fired October 24 at 9:45:04 AM Pacific for the temporary 9:45 AM test, reported 4.98 seconds jitter and HTTP 200; started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748). GitHub completion pending. |
-| Final saved schedule | Enabled job reloaded and verified: `0,15 7 * * *`, America/Los_Angeles, next runs October 25 at 7:00 and 7:15 AM. Temporary test schedule removed. |
+| Genuine timed service execution | Fired October 24 at 9:45:04 AM Pacific for the temporary 9:45 AM test, reported 4.98 seconds jitter and HTTP 200; started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748). Succeeded: 50 tests passed; at 9:45:34 AM the log verified exactly two existing tasks with no changes. GitHub reported completion later, around 9:53 AM. |
+| Final saved schedule and workflow | Enabled job reloaded and verified: `0,15 7 * * *`, America/Los_Angeles, next runs October 25 at 7:00 and 7:15 AM. Temporary test schedule removed. GitHub workflow ID 393303938 is active; main contains only the single later native fallback. |
 | Independent Tasks check | Existing My Tasks list for swapnilbotu@gmail.com: exactly one lunch and one dinner due October 24; both already completed. IDs and full notes retained. |
 | Local regression suite | All 50 tests passed after preparing the workflow schedule change. |
 | Older ChatGPT meal automation | Daily Berkeley Meal Tasks remains disabled; no replacement ChatGPT meal prompt was created. |
 
 Today's task IDs:
+
 - Lunch: `dlZ1S0JJQkM4ZHQxVlZaQw`
 - Dinner: `VW5ZTUZyRWUzV2JIdm9YMA`
 - Existing My Tasks list: `MDM4Mzk1Mjg4NzQxODE3ODY0NzU6MDow`
