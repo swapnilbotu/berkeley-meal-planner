@@ -1,15 +1,33 @@
-# Independent free scheduler: prepared, not activated
+# Independent free scheduler
 
 GitHub scheduled events were absent through 8:51 AM Pacific on October 24.
 Yesterday's first recorded schedule event arrived at 11 AM. Manual dispatches
 worked, including today's verified two-task recovery. These observations do not
-identify GitHub's internal cause. Plain UTC triggers are being tested separately.
+identify GitHub's internal cause. Plain UTC retries did not demonstrate timely
+delivery during the morning checks; native cron is now only a later fallback.
 
-The fallback below replaces the scheduling dependency with cron-job.org while
+The primary trigger below replaces the scheduling dependency with cron-job.org while
 keeping Python execution, Google OAuth secrets, and tests in private GitHub Actions.
 It is not a ChatGPT reminder and does not run AI inference.
 
-## Account authorization required
+## Account authorization and renewal
+
+Job: https://console.cron-job.org/jobs/8714628
+
+The account and repository-limited credential are configured. The authenticated
+service test returned HTTP 200 and started
+[run 40112697565](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40112697565),
+which passed 50 tests and verified exactly two existing meal tasks without changes.
+An actual scheduled request fired October 24 at **9:45:04 AM Pacific**, against a
+9:45:00 AM temporary test schedule (4.98 seconds reported jitter), and returned
+HTTP 200. It started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748).
+GitHub has assigned a runner but its completion is still pending. The job was then
+restored to the production schedule below, saved, reloaded, and verified enabled:
+the next executions are October 25 at 7:00 AM and 7:15 AM Pacific.
+
+The saved token expires **November 23, 2026 at 17:34:05 UTC (9:34 AM Pacific)**,
+as reported by GitHub's authentication-expiration response header. Renew before
+that date using the steps below. The token itself is never included in this repo.
 
 1. Create/sign in to a free account at https://console.cron-job.org/.
    No paid membership, payment method, or billing upgrade is required.
@@ -46,9 +64,9 @@ The second dispatch reads and preserves an existing complete daily plan. It does
 not duplicate tasks or change completed tasks. An HTTP success confirms only
 dispatch acceptance, not successful menu retrieval or task writes.
 
-## Verification before declaring migration complete
+## Verification and operation
 
-Run the service's test request. Check the new GitHub run, its test results and
+For a redeployment, run the service's test request. Check the new GitHub run, its test results and
 read-back log, then independently verify exactly one lunch and one dinner task
 for the current Pacific date. Observe a genuine scheduled request in the service
 history and its corresponding successful GitHub run. After that, reduce native
@@ -57,8 +75,10 @@ retain manual dispatch. Do not disable the workflow itself.
 
 The account-wide $0 Actions stop-spending protection remains required. An external
 scheduler avoids GitHub's cron dispatcher but cannot guarantee availability of
-GitHub runners, Berkeley's website, or Google's API. This setup is not active until
-the account authorization and live service test are completed.
+GitHub runners, Berkeley's website, or Google's API. HTTP 401 means the saved token
+or Authorization header is invalid; HTTP 403 requires inspecting repository
+permissions or service restrictions. Never log the Authorization header or open
+the service's raw-request view while collecting screenshots/logs.
 
 Sources checked October 24, 2026:
 - Free service/features: https://cron-job.org/en/

@@ -2,10 +2,9 @@ name: Daily Berkeley meals
 
 on:
   schedule:
-    # Plain UTC triggers cover both Pacific offsets. Python skips pre-7 AM runs.
-    # Retain 7 AM targeting, with off-hour retries and idempotent recovery.
-    - cron: '0,23 14,15 * * *'
-    - cron: '57 15 * * *'
+    # Primary: cron-job.org at 7:00 and 7:15 America/Los_Angeles.
+    # One independent fallback: 9:17 AM PDT / 8:17 AM PST.
+    # All automatic dispatches preserve an existing complete daily plan.
     - cron: '17 16 * * *'
   workflow_dispatch:
     inputs:
