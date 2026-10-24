@@ -511,10 +511,14 @@ def main(argv=None):
     parser.add_argument("--date", type=date.fromisoformat)
     parser.add_argument("--write", action="store_true", help="Write and verify Google Tasks; default is read-only dry run")
     parser.add_argument("--if-missing", action="store_true", help="Recovery: preserve an existing complete daily plan; requires --write")
+    parser.add_argument("--scheduled", action="store_true", help="Skip UTC schedule attempts before 7 AM Pacific")
     parser.add_argument("--output", default="out/plan.json")
     args = parser.parse_args(argv)
     if args.if_missing and not args.write:
         parser.error("--if-missing requires --write")
+    if args.scheduled and datetime.now(TZ).hour < 7:
+        LOG.info("UTC schedule attempt is before 7 AM Pacific; no API calls or task changes")
+        return
     day = args.date or datetime.now(TZ).date()
     if args.write and day != datetime.now(TZ).date():
         raise VerificationError("Writes are limited to today's Los Angeles date")

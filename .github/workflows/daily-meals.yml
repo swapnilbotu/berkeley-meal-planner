@@ -2,13 +2,11 @@ name: Daily Berkeley meals
 
 on:
   schedule:
-    - cron: '0 7 * * *'
-      timezone: America/Los_Angeles
-    # Off-hour retries recover a delayed/dropped trigger or transient source failure.
-    - cron: '23 7 * * *'
-      timezone: America/Los_Angeles
-    - cron: '17 8 * * *'
-      timezone: America/Los_Angeles
+    # Plain UTC triggers cover both Pacific offsets. Python skips pre-7 AM runs.
+    # Retain 7 AM targeting, with off-hour retries and idempotent recovery.
+    - cron: '0,23 14,15 * * *'
+    - cron: '57 15 * * *'
+    - cron: '17 16 * * *'
   workflow_dispatch:
     inputs:
       write_tasks:
@@ -53,8 +51,11 @@ jobs:
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           WRITE_TASKS: ${{ github.event_name == 'schedule' || inputs.write_tasks }}
           RECOVERY_ONLY: ${{ github.event_name == 'schedule' || inputs.recovery_only }}
+          SCHEDULED_RUN: ${{ github.event_name == 'schedule' }}
         run: |
-          if [ "$WRITE_TASKS" = 'true' ]; then
+          if [ "$SCHEDULED_RUN" = 'true' ]; then
+            python mealplanner.py --write --if-missing --scheduled
+          elif [ "$WRITE_TASKS" = 'true' ]; then
             if [ "$RECOVERY_ONLY" = 'true' ]; then
               python mealplanner.py --write --if-missing
             else

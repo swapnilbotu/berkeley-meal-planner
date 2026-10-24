@@ -191,6 +191,32 @@ def test_recovery_rejects_duplicates_and_does_not_accept_other_dates(meals):
         m.existing_plan(FakeTasks(payloads+[payloads[0]]), DAY)
 
 
+@pytest.mark.parametrize('utc,should_run', [
+    ('2026-10-24T13:59:00+00:00', False),
+    ('2026-10-24T14:00:00+00:00', True),
+    ('2026-11-01T14:23:00+00:00', False),
+    ('2026-11-01T15:00:00+00:00', True),
+    ('2027-03-14T14:00:00+00:00', True),
+])
+def test_utc_schedule_guard_across_dst(monkeypatch, tmp_path, meals, utc, should_run):
+    instant = datetime.fromisoformat(utc)
+    class Clock:
+        @staticmethod
+        def now(tz):
+            return instant.astimezone(tz)
+    monkeypatch.setattr(m, 'datetime', Clock)
+    day = instant.astimezone(m.TZ).date()
+    client = FakeTasks(m.task_payloads(day, meals))
+    auth_calls = []
+    def auth():
+        auth_calls.append(True)
+        return client
+    monkeypatch.setattr(m, 'Tasks', auth)
+    m.main(['--write','--if-missing','--scheduled','--output',str(tmp_path/'plan.json')])
+    assert bool(auth_calls) == should_run
+    assert client.calls == []
+
+
 def test_lost_insert_response_does_not_duplicate_on_rerun(meals):
     payload=m.task_payloads(DAY,meals)
     client=FakeTasks();client.lose_insert_response=True
