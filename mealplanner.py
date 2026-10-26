@@ -195,9 +195,13 @@ def load_today(day):
 # Conservative safety filter: positive vegan/vegetarian label, or explicitly chicken.
 FORBIDDEN = re.compile(r"\b(beef|pork|bacon|ham|turkey|lamb|mutton|goat|veal|duck|goose|venison|bison|rabbit|quail|fish|salmon|tuna|cod|tilapia|haddock|anchov\w*|bonito|shrimp|prawn\w*|clam\w*|oyster\w*|crab|lobster|mussel\w*|scallop\w*|squid|octopus|gelatin|lard)\b", re.I)
 EGG = re.compile(r"\b(eggs?|albumen|mayonnaise)\b", re.I)
+DISLIKED_FOODS = re.compile(r"\bpot[\s-]*stickers?\b", re.I)
 
 
 def eligible(food, day):
+    # Permanent food preference applies to every day, venue, and dietary label.
+    if DISLIKED_FOODS.search(food.name):
+        return False
     vegetarian_day = day.weekday() in {0, 3, 5}
     vegan = "vegan option" in food.diets
     vegetarian = vegan or "vegetarian option" in food.diets

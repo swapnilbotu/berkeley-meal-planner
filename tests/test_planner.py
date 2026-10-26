@@ -110,6 +110,17 @@ def test_eggs_and_broth_rejected(foods):
     assert not m.eligible(replace(f,name='Turkey',diets=frozenset(),ingredients='Turkey',allergens=frozenset()),date(2026,10,23))
 
 
+@pytest.mark.parametrize('name', ['Edamame Potsticker', 'Vegetable Potstickers', 'POT STICKERS', 'Chicken pot-stickers'])
+@pytest.mark.parametrize('day', [DAY, date(2026,10,23)])
+def test_potstickers_excluded_regardless_of_dietary_label(foods, name, day):
+    vegan = replace(foods[0], name=name, diets=frozenset({'vegan option'}),
+                    ingredients='Vegetables, flour', allergens=frozenset())
+    assert not m.eligible(vegan, day)
+    chicken = replace(vegan, diets=frozenset(), ingredients='Chicken, flour')
+    assert not m.eligible(chicken, day)
+    assert m.eligible(replace(vegan, name='Baked Lemongrass Tofu'), day)
+
+
 def test_payload_reconciles_and_date_only(meals):
     payload = m.task_payloads(DAY, meals)
     assert len(payload)==2
