@@ -121,6 +121,16 @@ def test_potstickers_excluded_regardless_of_dietary_label(foods, name, day):
     assert m.eligible(replace(vegan, name='Baked Lemongrass Tofu'), day)
 
 
+@pytest.mark.parametrize('name', ['Vegan Italian "Sausage"', 'Chicken Sausages', 'Soyrizo', 'Plant-based Bratwurst'])
+@pytest.mark.parametrize('field', ['name', 'ingredients'])
+@pytest.mark.parametrize('day', [DAY, date(2026,10,23)])
+def test_sausages_excluded_in_names_and_ingredients(foods, name, field, day):
+    food = replace(foods[0], name='Vegetable bowl', ingredients='Tofu, rice',
+                   diets=frozenset({'vegan option'}), allergens=frozenset())
+    assert m.eligible(food, day)
+    assert not m.eligible(replace(food, **{field: name}), day)
+
+
 def test_payload_reconciles_and_date_only(meals):
     payload = m.task_payloads(DAY, meals)
     assert len(payload)==2
