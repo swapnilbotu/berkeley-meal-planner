@@ -29,8 +29,8 @@ MENU = "https://dining.berkeley.edu/menus/"
 AJAX = "https://dining.berkeley.edu/wp-admin/admin-ajax.php"
 UNION = "https://studentunion.berkeley.edu/food/"
 PLAN_POLICY = "https://dining.berkeley.edu/meal-plans/2026-2027/living-on-campus/"
-ACCOUNT = "swapnilbotu@gmail.com"
-LIST_ID = "MDM4Mzk1Mjg4NzQxODE3ODY0NzU6MDow"
+ACCOUNT = os.environ.get("MEAL_TASKS_ACCOUNT", "").strip().lower()
+LIST_ID = os.environ.get("MEAL_TASKS_LIST_ID", "").strip()
 D = Decimal
 
 
@@ -386,6 +386,8 @@ class Tasks:
         secrets = [os.environ.get(k) for k in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN")]
         if not all(secrets):
             raise VerificationError("Missing Google OAuth secrets")
+        if not ACCOUNT or not LIST_ID:
+            raise VerificationError("Missing meal planner account or list configuration")
         r = self.session.post("https://oauth2.googleapis.com/token", data=dict(zip(
             ("client_id", "client_secret", "refresh_token"), secrets)) | {"grant_type":"refresh_token"}, timeout=30)
         if not r.ok:
@@ -546,8 +548,7 @@ def main(argv=None):
     dest = Path(args.output)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(payloads, indent=2, ensure_ascii=False)+"\n")
-    for slot, meal in zip(("Lunch", "Dinner"), meals):
-        LOG.info("%s: %s, %s kcal, %s g protein, 1 swipe", slot, meal.location, meal.calories, meal.protein)
+    LOG.info("Generated two meal plans")
     if client:
         reconcile(client, day, payloads)
     else:
@@ -559,5 +560,8 @@ if __name__ == "__main__":
     try:
         main()
     except (VerificationError, ET.ParseError) as exc:
-        LOG.error("Run stopped: %s", exc)
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            LOG.error("Meal planner stopped (%s)", type(exc).__name__)
+        else:
+            LOG.error("Run stopped: %s", exc)
         raise SystemExit(1)

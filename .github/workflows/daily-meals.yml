@@ -45,6 +45,8 @@ jobs:
         run: python -m pytest -q
       - name: Retrieve official menus, plan, and verify tasks
         env:
+          MEAL_TASKS_ACCOUNT: ${{ secrets.MEAL_TASKS_ACCOUNT }}
+          MEAL_TASKS_LIST_ID: ${{ secrets.MEAL_TASKS_LIST_ID }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
@@ -65,5 +67,7 @@ jobs:
           fi
       - name: Execution summary
         if: always()
+        env:
+          PLANNER_JOB_STATUS: ${{ job.status }}
         run: |
           python scripts/summarize.py >> "$GITHUB_STEP_SUMMARY"

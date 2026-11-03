@@ -1,3 +1,9 @@
+import os as _config_os
+
+expected_account = _config_os.environ.get("MEAL_TASKS_ACCOUNT", "").strip().lower()
+if not expected_account:
+    raise SystemExit("Set MEAL_TASKS_ACCOUNT to your expected Google account before authorizing.")
+
 """One-time local OAuth PKCE authorization; write directly to GitHub encrypted secrets.
 
 Run on a trusted computer with a browser and authenticated `gh`. No credentials
@@ -59,8 +65,8 @@ redirect = f'http://127.0.0.1:{server.server_port}/'
 url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode({
     'client_id':client['client_id'], 'redirect_uri':redirect, 'response_type':'code',
     'scope':SCOPES, 'access_type':'offline', 'prompt':'consent', 'state':state,
-    'code_challenge':challenge, 'code_challenge_method':'S256', 'login_hint':'swapnilbotu@gmail.com'})
-print('Opening Google consent in your browser. Authorize swapnilbotu@gmail.com.')
+    'code_challenge':challenge, 'code_challenge_method':'S256', 'login_hint':expected_account})
+print('Opening Google consent in your browser. Use the configured Google account.')
 if not webbrowser.open(url):
     raise SystemExit('Could not open browser. Run this on a computer with a browser.')
 server.handle_request()
@@ -77,7 +83,7 @@ if not tokens.get('refresh_token'):
     raise SystemExit('No refresh token received. Revoke the app grant and authorize again.')
 profile = requests.get('https://openidconnect.googleapis.com/v1/userinfo',
                        headers={'Authorization':'Bearer '+tokens['access_token']}, timeout=30)
-if not profile.ok or profile.json().get('email') != 'swapnilbotu@gmail.com' or not profile.json().get('email_verified'):
+if not profile.ok or profile.json().get('email') != expected_account or not profile.json().get('email_verified'):
     raise SystemExit('Wrong Google account; no GitHub secrets were changed.')
 for name, value in [('GOOGLE_CLIENT_ID', client['client_id']), ('GOOGLE_CLIENT_SECRET', client['client_secret']),
                     ('GOOGLE_REFRESH_TOKEN', tokens['refresh_token'])]:

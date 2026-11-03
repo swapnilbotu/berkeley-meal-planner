@@ -20,7 +20,7 @@ The default is a live dry run, with no Google Tasks writes. Output goes to `out/
 python mealplanner.py --write
 ```
 
-Write mode reads `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN` from the environment. It verifies the authenticated email is `swapnilbotu@gmail.com` and requires the already existing `My Tasks` list with the verified ID in `mealplanner.py`. It never creates a task list.
+Write mode reads `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN` from the environment. It verifies the authenticated email is `the configured Google account` and requires the already existing `My Tasks` list with the verified ID in `mealplanner.py`. It never creates a task list.
 
 ## Data and meal rules
 
@@ -110,3 +110,7 @@ The repository-limited scheduler token expires **November 23, 2026 at 9:34 AM Pa
 - Google OAuth refresh tokens: https://developers.google.com/identity/protocols/oauth2
 
 The fixture XML and menu HTML contain official public menu data retrieved October 22, 2026. They are test evidence only; production always retrieves fresh data.
+
+### Private task destination
+
+Set the repository Actions secrets `MEAL_TASKS_ACCOUNT` (verified Google email) and `MEAL_TASKS_LIST_ID` (existing My Tasks list ID). For local write mode, set the same names as environment variables. The local OAuth bootstrap also needs `MEAL_TASKS_ACCOUNT`. Dry runs do not require either value.

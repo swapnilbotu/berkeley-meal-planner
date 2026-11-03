@@ -23,7 +23,7 @@ scheduled prompt. Google OAuth credentials remain in encrypted Actions secrets.
 
 ## Configuration
 
-- Free scheduler job: https://console.cron-job.org/jobs/8714628
+- Free scheduler job: the job in your private cron-job.org dashboard
 - Production schedule: `0,15 7 * * *`, timezone `America/Los_Angeles`.
 - Primary attempt: 7:00 AM; recovery check: 7:15 AM; daylight saving handled by timezone.
 - Native GitHub fallback: `17 16 * * *` (9:17 AM PDT / 8:17 AM PST).
@@ -48,7 +48,7 @@ scheduled prompt. Google OAuth credentials remain in encrypted Actions secrets.
 | Authenticated external test request | cron-job.org HTTP 200, [run 40112697565](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40112697565), October 24 at 9:41 AM Pacific: 50 tests passed; exactly two existing tasks verified, no changes. |
 | Genuine timed service execution | Fired October 24 at 9:45:04 AM Pacific for the temporary 9:45 AM test, reported 4.98 seconds jitter and HTTP 200; started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748). Succeeded: 50 tests passed; at 9:45:34 AM the log verified exactly two existing tasks with no changes. GitHub reported completion later, around 9:53 AM. |
 | Final saved schedule and workflow | Enabled job reloaded and verified: `0,15 7 * * *`, America/Los_Angeles, next runs October 25 at 7:00 and 7:15 AM. Temporary test schedule removed. GitHub workflow ID 393303938 is active; main contains only the single later native fallback. |
-| Independent Tasks check | Existing My Tasks list for swapnilbotu@gmail.com: exactly one lunch and one dinner due October 24; both already completed. IDs and full notes retained. |
+| Independent Tasks check | Existing My Tasks list for the configured Google account: exactly one lunch and one dinner due October 24; both already completed. IDs and full notes retained. |
 | Local regression suite | All 50 tests passed after preparing the workflow schedule change. |
 | Older ChatGPT meal automation | Daily Berkeley Meal Tasks remains disabled; no replacement ChatGPT meal prompt was created. |
 
@@ -56,7 +56,7 @@ Today's task IDs:
 
 - Lunch: `dlZ1S0JJQkM4ZHQxVlZaQw`
 - Dinner: `VW5ZTUZyRWUzV2JIdm9YMA`
-- Existing My Tasks list: `MDM4Mzk1Mjg4NzQxODE3ODY0NzU6MDow`
+- Existing My Tasks list: `MEAL_TASKS_LIST_ID`
 
 | Meal | Location | Calories | Protein |
 |---|---|---:|---:|

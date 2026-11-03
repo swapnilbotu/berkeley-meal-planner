@@ -12,7 +12,7 @@ It is not a ChatGPT reminder and does not run AI inference.
 
 ## Account authorization and renewal
 
-Job: https://console.cron-job.org/jobs/8714628
+Job: the job in your private cron-job.org dashboard
 
 The account and repository-limited credential are configured. The authenticated
 service test returned HTTP 200 and started
