@@ -29,10 +29,10 @@ Dinner also includes an estimated daily total with snacks. This example illustra
 
 ## How it works
 
-1. **Find today’s menu.** Read Berkeley Dining’s date-filtered menu and match its listed dishes to the corresponding XML exports.
-2. **Build and rank meals.** Apply dietary rules and food exclusions, then compare portions, calories, protein, and variety. The planner prefers Crossroads when the nutrition fit is comparable and can select a verified Monsoon Kitchens bowl on eligible days.
-3. **Verify the selection.** Cross-check each selected item’s name, serving size, calories, and protein against its official nutrition panel. If a plan can’t be verified, stop before writing tasks.
-4. **Save lunch and dinner in Google Tasks.** The planner checks for today’s tasks first so it won’t add duplicates. It updates existing tasks without unchecking them, adds any missing task, and checks that both are saved. Backup runs leave a complete plan alone, including any edits you made.
+1. **Read today’s menu.** The planner uses Python Requests and Beautiful Soup to fetch Berkeley Dining’s menu for the current day and match listed dishes to their nutrition facts in the official XML exports.
+2. **Build and rank meals.** It applies the day’s dietary rules and food exclusions, then scores meal combinations by portion size, calories, protein, and variety. It favors Crossroads when the nutrition fit is comparable because it’s the closest dining hall to me. Monsoon Kitchens is my favorite lunch spot, so the planner picks my usual bowl on eligible days when it can verify the full order and meal swipe.
+3. **Double-check the nutrition facts.** It opens each selected item’s official nutrition panel and compares its name, serving size, calories, and protein with the XML data. If any of those details don’t match or can’t be verified, it stops before creating or updating the day’s tasks.
+4. **Save lunch and dinner.** It formats two Google Tasks with what to order, where to get it, and the portions and nutrition for each item. The Google Tasks API saves them with today’s due date so they can appear in Google Calendar.
 
 The daily trigger runs at **7:00 a.m. Pacific**, with a **7:15 a.m. recovery check** and a later GitHub Actions fallback. A trigger starts the workflow; task delivery depends on the menu and Google Tasks APIs being available.
 
