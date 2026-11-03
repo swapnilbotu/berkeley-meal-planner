@@ -1,116 +1,73 @@
 # Berkeley Meal Planner
 
-Deterministic Python planner using official Berkeley menu XML and nutrition-popup requests, free cron-job.org scheduling, and private GitHub Actions. No AI inference, paid API, paid hosting, or database is used.
+Turn UC Berkeley dining menus into **two meals you can order with your meal swipes**. I built this to spend less time checking menus and adding up nutrition facts. Every morning, the planner selects lunch and dinner and puts both in Google Tasks.
 
-**Deployment status: external scheduler enabled and verified on October 24, 2026.** Private repository: https://github.com/swapnilbotu/berkeley-meal-planner. GitHub's native cron missed the morning target on two days, so cron-job.org now supplies the primary trigger. Its authenticated test started [run 40112697565](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40112697565), which passed all 50 tests and read back exactly two existing meal tasks without changing them. An actual scheduled trigger also started [run 40113002748](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40113002748), which passed all 50 tests and verified the same two tasks without changes. The saved daily schedule is 7:00 and 7:15 AM Pacific. Today's earlier [recovery run](https://github.com/swapnilbotu/berkeley-meal-planner/actions/runs/40108915300) retrieved current official menus, verified six selected nutrition panels, and created both tasks. See [the deployment report](DEPLOYMENT_REPORT.md) and [scheduler configuration](docs/external-scheduler.md) for verification and maintenance details.
+- **One swipe per meal.** The planner checks dining hall and eligible retail options against meal-swipe rules.
+- **A plan you can follow in line.** Each task lists where to go, what to order, where to find each item when station data is available, and how much to get.
+- **Nutrition you can trace.** Calories, protein, and serving sizes are checked against Berkeley’s published data. Snack estimates are labeled separately.
 
-## Run locally
+Built with Python, Requests, Beautiful Soup, GitHub Actions, cron-job.org, and the Google Tasks API. The planner uses rule-based scoring and runs without paid hosting or AI inference.
 
-Requires Python 3.12+.
+## What a task looks like
+
+A sample lunch task from Monsoon Kitchens, abridged:
+
+```text
+Lunch — Monsoon Kitchens / Chicken katora bowl
+
+- Basmati Rice — 1 published serving (181.55 C, 3.63 P)
+- Chicken Tikka Masala — 1 published serving (179.51 C, 21.90 P)
+- Aloo Chole — 1 published serving (85.09 C, 3.65 P)
+- Samosa — 1 published serving (95.37 C, 1.44 P)
+- Tamarind Chutney — 1 published serving (35.46 C, 0.00 P)
+- Kachumber Salad — 1 published serving (4.37 C, 0.18 P)
+
+Total: 581.35 calories · 30.80 g protein
+```
+
+Dinner also includes an estimated daily total with snacks. This example illustrates the output; availability changes with the menu.
+
+## How it works
+
+1. **Find today’s menu.** Read Berkeley Dining’s date-filtered menu and match its listed dishes to the corresponding XML exports.
+2. **Build and rank meals.** Apply dietary rules and food exclusions, then compare portions, calories, protein, and variety. The planner prefers Crossroads when the nutrition fit is comparable and can select a verified Monsoon Kitchens bowl on eligible days.
+3. **Verify the selection.** Cross-check each selected item’s name, serving size, calories, and protein against its official nutrition panel. If a plan can’t be verified, stop before writing tasks.
+4. **Sync Google Tasks.** Match lunch and dinner by due date and title. Update existing tasks without clearing completion status, create missing tasks, and read both back. Recovery runs preserve a complete plan.
+
+The daily trigger runs at **7:00 a.m. Pacific**, with a **7:15 a.m. recovery check** and a later GitHub Actions fallback. A trigger starts the workflow; task delivery depends on the menu and Google Tasks APIs being available.
+
+## Try it locally
+
+Requires Python 3.12+. Run from the repository root, preferably in a virtual environment:
+
+```bash
+python -m pip install -r requirements.txt
+python mealplanner.py
+```
+
+This is a **live dry run**: it fetches public Berkeley menus and writes a local preview to `out/plan.json`. It needs no Google credentials and makes no Google Tasks changes. Use `--date YYYY-MM-DD` for another date with published menu data.
+
+To run the regression tests:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
-python mealplanner.py
 ```
 
-The default is a live dry run, with no Google Tasks writes. Output goes to `out/plan.json`, excluded from git. `--date YYYY-MM-DD` supports testing dates published by Berkeley. Write mode only permits today's date in America/Los_Angeles:
+The tests cover menu validation, dietary exclusions, nutrition checks, and recovery without duplicate tasks.
 
-```bash
-python mealplanner.py --write
-```
+## Automation setup
 
-Write mode reads `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN` from the environment. It verifies the authenticated email is `the configured Google account` and requires the already existing `My Tasks` list with the verified ID in `mealplanner.py`. It never creates a task list.
+The live deployment is personal. To run your own copy, use your own Google OAuth configuration and an existing `My Tasks` list. Configure these as environment variables for local writes or as GitHub Actions secrets for hosted runs:
 
-## Data and meal rules
+| Setting | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` | Google Tasks authorization |
+| `MEAL_TASKS_ACCOUNT` | Expected verified Google email |
+| `MEAL_TASKS_LIST_ID` | ID of the existing destination list |
 
-1. POST `cald_filter_xml` with today's Los Angeles date to the official WordPress AJAX endpoint. This is the request made by the menu date filter.
-2. Discover the actual date-specific XML paths from `data-location`, rather than inventing paths or assuming recurring menus.
-3. Fetch the four permitted location exports when present. Require the requested service date, valid service hours, approved nutrition, ingredients, and a positive serving size. Intersect XML recipe IDs with the menu response.
-4. Enforce vegetarian/no-egg Monday, Thursday, and Saturday; other days permit chicken as the only meat. Require positive dietary labeling or explicitly chicken ingredients, with prohibited meat/allergen checks. Permanently exclude all potstickers and all sausages, including vegan, plant-based, edamame, and chicken versions, on every day and at every venue. Check both food names and ingredients; sausage exclusions also cover chorizo/soyrizo, bratwurst, frankfurter/hot dog, kielbasa, and andouille.
-5. Build 500–625 kcal dining-hall meals from one main protein/entrée and 1–2 sides. The main can be 1, 1.5, or 2 published servings. At least one side must be a vegetable/legume/fruit-type food. Condiment-only and dessert-only meals are excluded.
-6. Use the exact requested six-component Monsoon bowl on Tuesday, Wednesday, and Friday lunch when its complete menu and one-swipe policy are verified. The fixed bowl takes precedence over the usual soft calorie band. Weekends use only Café 3 and Crossroads.
-7. Ladle & Leaf full salads and grain bowls can be used when their published nutrition fits the band and the official one-swipe policy is still present. The included beverage is declined, so no unverified beverage nutrition is added.
-8. Prefer Crossroads over Café 3 when daily macros are comparable. Among plans within 20 macro-score points of the best daily fit (100 kcal or about 6.7 g protein of target error, with combined errors counting), minimize Café 3 meals. Café 3 remains available when Crossroads cannot meet that tolerance or is unavailable. Then optimize macros and variety, including recent meals. This preference never replaces the required Monsoon lunch or relaxes dietary, calorie, swipe or weekend rules.
-9. Re-fetch the selected items' official nutrition popups and match item name, serving size, calories, and protein to the XML. Any disagreement prevents task writes.
+The [OAuth bootstrap script](scripts/authorize_google.py) accepts `--client /path/to/client.json` and `--repo OWNER/REPO`. Set `MEAL_TASKS_ACCOUNT` first and keep the OAuth client file outside the repo. Once configured, `python mealplanner.py --write` writes only for today in Pacific time. Add `--if-missing` to preserve a complete plan.
 
-Golden Bear Café is fetched but currently excluded from selection: its official page confirms swipe acceptance, but no current official rule for specific eligible combinations was verified. Its foods must not be treated as freely combinable dining-hall items. Add it only after verifying exact combination rules against an official source and implementing tests for those rules.
+For hosted runs, verify zero-cost usage before setting `ZERO_COST_VERIFIED=true`. Set `GOOGLE_OAUTH_READY=true` only after configuring the destination and credentials. See the [scheduler setup](docs/external-scheduler.md) for dispatch and recovery details.
 
-Task notes use the requested compact layout: restaurant, meal, each component with the official dining-hall station/category and serving count, and reconciled calorie/protein totals. Technical source URLs, hours, ounce sizes, policy text, and internal markers are omitted from task notes; retrieval, dietary, hours, swipe and nutrition-panel checks still run. Retail notes retain the instruction to decline the included beverage.
-
-Snacks use the user's estimates: 170 kcal / 21–22 g protein per Kirkland bar and 320 kcal / 10 g protein per usual trail-mix portion. The optimizer uses the lower bar-protein value and selects 1–2 bars and 0–1.25 usual portions in quarter-portion increments. Task notes show quantities and the resulting protein range, with snack estimates and combined totals only in dinner. These are user-supplied estimates, not verified package labels.
-
-## Duplicate prevention and recovery
-
-- A single GitHub Actions concurrency group serializes runs.
-- List all pages, including hidden and completed tasks.
-- Match the target date and an anchored `Lunch —`/`Dinner —` prefix (hyphen/en dash also accepted).
-- Update existing tasks without resetting their completion status; create only missing tasks.
-- Remove only old duplicate tasks bearing this application's explicit management marker. New compact notes omit that marker: multiple unmarked tasks for one meal/date stop for review. Normal reruns still update the single existing task by date and meal title, including hidden/completed tasks.
-- Never blindly retry an insertion after a network error. A subsequent run lists tasks again and recovers an insertion that committed before its response was lost.
-- Read back both titles, complete notes, due dates, and count after writes.
-- Preflight both meal slots before modifying either one.
-
-Google Tasks has no two-task transaction and does not accept an idempotency key for task insertion. An outage can interrupt a run after one update. Rerunning the workflow repairs it. Concurrent writers outside this workflow must remain disabled. This app does not silently invent meals when official data is unavailable, a dining hall is closed, or no compliant combination exists.
-
-## Free deployment setup
-
-The primary trigger is a free cron-job.org job at **7:00 AM and 7:15 AM America/Los_Angeles**, with daylight saving handled by that timezone. It dispatches this workflow with `write_tasks=true` and `recovery_only=true`. The native GitHub schedule is a single later fallback, `17 16 * * *` (9:17 AM PDT / 8:17 AM PST). An existing complete lunch/dinner plan is read back and preserved, including completed tasks. Missing or incomplete plans go through current-menu validation and duplicate-safe reconciliation. Manual writes can refresh the plan; select `recovery_only` to preserve existing tasks. Each run has an eight-minute job cap, standard Ubuntu runner, no artifact uploads, and no caches. Three automatic runs per day give 93 runs over 31 days, or 744 job minutes at the cap before runner overhead, rounding, and manual/test runs. Other repositories share the free allowance; the $0 stop-spending protection remains required.
-
-**Before allocating any hosted runner:** verify remaining included minutes and either that the account has no payment method (usage stops when its free quota is exhausted) or that an effective zero-dollar Actions budget with stop-usage protection prevents paid usage. Never enable a paid allowance. Do not use larger runners. The workflow job is gated by repository variable `ZERO_COST_VERIFIED=true`; leave it unset until this check is completed. The variable is an administrative gate, not an API billing monitor.
-
-The private repository is https://github.com/swapnilbotu/berkeley-meal-planner, with default branch `main`. The October 2026 billing query returned no Actions usage entries. On October 22 the signed-in Budgets page showed an account-wide Actions budget of $0 with Usage blocked. `ZERO_COST_VERIFIED=true` is configured. `GOOGLE_OAUTH_READY=true` is also configured, enabling scheduled runs and manual writes. The setup instructions below are retained for recovery or redeployment; ordinary operation needs no further setup.
-
-## One-time Google authorization
-
-The ChatGPT Google Tasks connector's credentials are not exported. A standalone Google OAuth client and refresh token are required for the independent GitHub runner. Do not paste secrets into chat or commit them.
-
-Using your own Google account:
-
-1. In Google Cloud Console, create or choose a dedicated project **without linking or enabling a billing account**.
-2. Enable **Google Tasks API**. If any step requires payment, stop; do not start a paid trial or upgrade.
-3. Configure Google Auth Platform branding, audience, and data access for a personal external app. Scopes: `openid`, `email`, `https://www.googleapis.com/auth/tasks`.
-4. Configure the consent app as **In production**, not Testing. Testing-mode refresh tokens for Tasks scopes normally expire after seven days. Personal-use/unverified-app restrictions may apply; complete Google's account/security approvals yourself when prompted.
-5. Create a **Desktop app** OAuth client and download its client JSON to a trusted local directory outside the repository.
-6. On a trusted computer with a browser, Python, and the free GitHub CLI authenticated to the private repository, run:
-
-```bash
-python -m pip install -r requirements.txt
-python scripts/authorize_google.py --client /path/to/client.json --repo swapnilbotu/berkeley-meal-planner
-```
-
-The script uses a local loopback callback, random OAuth state, and PKCE. It verifies the Google email, then sends the client ID, client secret, and refresh token directly to GitHub encrypted Actions secrets via stdin. It does not print tokens, write a token file, or commit credentials. Account consent remains a user-controlled security step.
-
-## Enable and verify
-
-After zero-cost protection and OAuth secrets are verified:
-
-1. Verify `ZERO_COST_VERIFIED=true` remains justified by the account cost controls. After all three Google secrets exist, set `GOOGLE_OAUTH_READY=true` as a repository Actions variable.
-2. Confirm `.github/workflows/daily-meals.yml` is on the default branch and the workflow is active.
-3. Manually dispatch with `write_tasks=false`; inspect the completed live dry-run log.
-4. Dispatch with `write_tasks=true`; require a successful read-back log stating exactly two meal tasks for today's Los Angeles date.
-5. Dispatch once more with writes enabled and confirm the same two task IDs remain, including completed/hidden tasks.
-6. Confirm the old ChatGPT meal-planning automation is still disabled and no other deployment writes the same tasks.
-7. Record the repository URL, commit SHA, workflow URL, run IDs, task IDs, schedule, and cost-control evidence in the deployment report. Only then report production deployment successful.
-
-GitHub can delay or drop its native scheduled events. The external scheduler avoids that dispatcher, but the workflow still depends on available GitHub runners, Berkeley's official data, and Google's API. A 7:00 AM trigger starts work; it does not guarantee tasks at exactly 7:00:00. Failed workflows expose a red run status and useful logs; notification delivery depends on your GitHub notification settings. No replacement ChatGPT meal automation is used.
-
-The repository-limited scheduler token expires **November 23, 2026 at 9:34 AM Pacific**. Renew it before that date and update only cron-job.org's Authorization header. Google OAuth secrets remain in GitHub Actions. Never paste either credential into chat or commit it.
-
-## Official references
-
-- Menu: https://dining.berkeley.edu/menus/
-- Menu UI code: https://dining.berkeley.edu/wp-content/plugins/cal-dining/assets/custom.js
-- Retail meal equivalencies: https://studentunion.berkeley.edu/food/
-- Current meal-plan policy: https://dining.berkeley.edu/meal-plans/2026-2027/living-on-campus/
-- GBC: https://dining.berkeley.edu/campus-restaurants/the-golden-bear-cafe/
-- GitHub schedules/timezones: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule
-- GitHub free allowance/billing: https://docs.github.com/en/billing/concepts/product-billing/github-actions
-- Google Tasks quotas: https://developers.google.com/workspace/tasks/limits
-- Google OAuth refresh tokens: https://developers.google.com/identity/protocols/oauth2
-
-The fixture XML and menu HTML contain official public menu data retrieved October 22, 2026. They are test evidence only; production always retrieves fresh data.
-
-### Private task destination
-
-Set the repository Actions secrets `MEAL_TASKS_ACCOUNT` (verified Google email) and `MEAL_TASKS_LIST_ID` (existing My Tasks list ID). For local write mode, set the same names as environment variables. The local OAuth bootstrap also needs `MEAL_TASKS_ACCOUNT`. Dry runs do not require either value.
+Menu and policy sources: [Berkeley Dining](https://dining.berkeley.edu/menus/) · [Student Union dining](https://studentunion.berkeley.edu/food/).
