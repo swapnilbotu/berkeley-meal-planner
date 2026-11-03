@@ -32,7 +32,7 @@ Dinner also includes an estimated daily total with snacks. This example illustra
 1. **Find today’s menu.** Read Berkeley Dining’s date-filtered menu and match its listed dishes to the corresponding XML exports.
 2. **Build and rank meals.** Apply dietary rules and food exclusions, then compare portions, calories, protein, and variety. The planner prefers Crossroads when the nutrition fit is comparable and can select a verified Monsoon Kitchens bowl on eligible days.
 3. **Verify the selection.** Cross-check each selected item’s name, serving size, calories, and protein against its official nutrition panel. If a plan can’t be verified, stop before writing tasks.
-4. **Sync Google Tasks.** Match lunch and dinner by due date and title. Update existing tasks without clearing completion status, create missing tasks, and read both back. Recovery runs preserve a complete plan.
+4. **Save lunch and dinner in Google Tasks.** The planner checks for today’s tasks first so it won’t add duplicates. It updates existing tasks without unchecking them, adds any missing task, and checks that both are saved. Backup runs leave a complete plan alone, including any edits you made.
 
 The daily trigger runs at **7:00 a.m. Pacific**, with a **7:15 a.m. recovery check** and a later GitHub Actions fallback. A trigger starts the workflow; task delivery depends on the menu and Google Tasks APIs being available.
 
