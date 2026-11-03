@@ -10,7 +10,7 @@ Built with Python, Requests, Beautiful Soup, GitHub Actions, cron-job.org, and t
 
 ## What a task looks like
 
-A sample lunch task from Monsoon Kitchens, abridged:
+A sample lunch task from Monsoon Kitchens (an on-campus eatery), abridged:
 
 ```text
 Lunch — Monsoon Kitchens / Chicken katora bowl
