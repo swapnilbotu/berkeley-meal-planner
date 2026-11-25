@@ -179,7 +179,12 @@ def test_idempotent_rerun_and_completed_hidden(meals):
 
 @pytest.mark.parametrize('present', [0, 1, 2])
 def test_recovery_creates_missing_plan_without_changing_complete_plan(monkeypatch, tmp_path, meals, present):
-    day = datetime.now(m.TZ).date()
+    class OnServiceDay(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 22, 8, tzinfo=tz)
+    monkeypatch.setattr(m, "datetime", OnServiceDay)
+    day = DAY
     payloads = m.task_payloads(day, meals)
     existing = [p | {'id':str(i), 'status':'completed', 'hidden':True}
                 for i, p in enumerate(payloads[:present])]
@@ -388,3 +393,24 @@ def test_crossroads_preference_does_not_override_monsoon(foods):
     day=date(2026,10,23)
     selected=m.choose([replace(f,day=day) for f in foods],day,POLICY)
     assert selected[0].location=='Monsoon Kitchens'
+
+
+@pytest.mark.parametrize("day", range(25, 29))
+def test_announced_closure_skips_even_write_runs(day, tmp_path, monkeypatch):
+    class OnClosure(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 11, day, 8, tzinfo=tz)
+    monkeypatch.setattr(m, "datetime", OnClosure)
+    monkeypatch.setattr(m, "Tasks", lambda: pytest.fail("unexpected Google Tasks access"))
+    monkeypatch.setattr(m, "load_today", lambda d: pytest.fail("unexpected menu retrieval"))
+    output = tmp_path / "plan.json"
+    m.main(["--write", "--if-missing", "--output", str(output)])
+    result = json.loads(output.read_text())
+    assert result["status"] == "announced_closure"
+    assert ("closed for dinner" if day == 25 else "All Berkeley Dining") in result["notice"]
+
+
+@pytest.mark.parametrize("day", [date(2026, 11, 24), date(2026, 11, 29), date(2027, 11, 25)])
+def test_normal_service_outside_announced_dates(day):
+    assert m.announced_closure(day) is None

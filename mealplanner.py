@@ -515,6 +515,19 @@ def existing_plan(client, day):
     return payloads
 
 
+# One-time exceptions from the published 2026 Thanksgiving service notice.
+# These dates must not repeat in later years or hide unrelated verification failures.
+HOURS_PAGE = "https://dining.berkeley.edu/locations/hours-of-operation/"
+
+
+def announced_closure(day):
+    if day == date(2026, 11, 25):
+        return "Crossroads and Café 3 are closed for dinner."
+    if date(2026, 11, 26) <= day <= date(2026, 11, 28):
+        return "All Berkeley Dining locations are closed."
+    return None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", type=date.fromisoformat)
@@ -531,6 +544,14 @@ def main(argv=None):
     day = args.date or datetime.now(TZ).date()
     if args.write and day != datetime.now(TZ).date():
         raise VerificationError("Writes are limited to today's Los Angeles date")
+    closure = announced_closure(day)
+    if closure:
+        notice = f"{day}: {closure} No two-meal plan is possible; no tasks changed. Source: {HOURS_PAGE}"
+        LOG.info("%s", notice)
+        dest = Path(args.output)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(json.dumps({"status": "announced_closure", "notice": notice}) + "\n")
+        return
     client = Tasks() if args.write else None
     if args.if_missing:
         saved = existing_plan(client, day)
